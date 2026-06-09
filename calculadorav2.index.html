@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Calculadora de cuotas por entidad - ZARO v2</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #ECF0F1;
+  padding: 20px;
+  color: #2C3E50;
+  line-height: 1.5;
+}
+.container { max-width: 1200px; margin: 0 auto; }
+.header {
+  background: linear-gradient(135deg, #C0DD97 0%, #9FE1CB 100%);
+  color: #173404;
+  padding: 16px 22px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+.header h1 { font-size: 17px; margin-bottom: 3px; }
+.header p { font-size: 11px; opacity: 0.85; }
+.inputs {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.input-group label {
+  display: block;
+  font-size: 11px;
+  color: #7F8C8D;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.input-group input, .input-group select {
+  width: 100%;
+  padding: 7px 9px;
+  font-size: 13px;
+  border: 1px solid #BDC3C7;
+  border-radius: 6px;
+  background: white;
+  font-family: inherit;
+}
+.input-group input:focus, .input-group select:focus {
+  outline: none;
+  border-color: #3498DB;
+  box-shadow: 0 0 0 3px rgba(52,152,219,0.15);
+}
+table {
+  width: 100%;
+  background: white;
+  border-collapse: collapse;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  font-size: 11.5px;
+}
+thead { background: #2C3E50; color: white; }
+thead th {
+  padding: 10px 6px;
+  font-weight: 500;
+  text-align: center;
+  font-size: 11px;
+}
+thead th:first-child { text-align: left; }
+tbody tr { border-bottom: 1px solid #ECF0F1; }
+tbody tr.deshabilitado { opacity: 0.4; background: #FAFBFC; }
+tbody td { padding: 8px 6px; text-align: center; }
+tbody td:first-child { text-align: left; font-weight: 500; }
+.coef-mono { font-family: "SF Mono", Monaco, Consolas, monospace; }
+.producto-select {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 11px;
+  border: 1px solid #BDC3C7;
+  border-radius: 4px;
+  background: white;
+  font-family: inherit;
+}
+.comision-input {
+  width: 56px;
+  height: 26px;
+  padding: 2px 6px;
+  font-size: 11px;
+  text-align: right;
+  border: 1px solid #BDC3C7;
+  border-radius: 4px;
+  font-family: inherit;
+}
+.comision-input:disabled { background: #ECF0F1; color: #95A5A6; }
+.coef-visible { font-weight: 500; color: #173404; }
+.cuota-hasta { color: #7F8C8D; }
+.cb-pos { color: #1E8449; font-weight: 500; }
+.cb-neg { color: #C0392B; font-weight: 500; }
+.cb-cero { color: #7F8C8D; }
+.resumen {
+  background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.resumen-titulo {
+  font-size: 10px;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.resumen-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.resumen-celda {
+  text-align: center;
+  padding: 12px 8px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 8px;
+}
+.resumen-celda.promedio {
+  background: rgba(192,221,151,0.22);
+  border: 1px solid #C0DD97;
+}
+.resumen-label {
+  font-size: 10px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+.resumen-coef {
+  font-size: 16px;
+  font-weight: 500;
+  font-family: "SF Mono", Monaco, Consolas, monospace;
+  margin-bottom: 4px;
+}
+.resumen-cuota { font-size: 14px; font-weight: 500; }
+.resumen-footer {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-top: 10px;
+  text-align: center;
+}
+.notas {
+  background: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 11px;
+  color: #5D6D7E;
+  line-height: 1.7;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.notas strong { color: #2C3E50; }
+.error {
+  padding: 14px;
+  background: #F09595;
+  color: #501313;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>Calculadora de cuotas por entidad · v2</h1>
+  <p>Datos oficiales abril 2026 · Galicia con variantes, Columbia con 3 productos, CB escalonada</p>
+</div>
+
+<div class="inputs">
+  <div class="input-group">
+    <label>Capital solicitado</label>
+    <input type="number" id="cap" value="7500000" step="500000">
+  </div>
+  <div class="input-group">
+    <label>Año vehículo</label>
+    <select id="anio">
+      <option value="2026">2026 (0km)</option>
+      <option value="2025">2025</option><option value="2024">2024</option><option value="2023">2023</option>
+      <option value="2022">2022</option><option value="2021">2021</option><option value="2020">2020</option>
+      <option value="2019">2019</option><option value="2018">2018</option><option value="2017">2017</option>
+      <option value="2016">2016</option><option value="2015">2015</option><option value="2014">2014</option>
+      <option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option>
+    </select>
+  </div>
+  <div class="input-group">
+    <label>Plazo (cuotas)</label>
+    <select id="plazo">
+      <option value="0">12 meses</option>
+      <option value="1">18 meses</option>
+      <option value="2">24 meses</option>
+      <option value="3">30 meses</option>
+      <option value="4">36 meses</option>
+      <option value="5">48 meses</option>
+      <option value="6">60 meses</option>
+    </select>
+  </div>
+</div>
+
+<table>
+<thead>
+<tr>
+<th style="width:11%;">Entidad</th>
+<th style="width:14%;">Producto</th>
+<th style="width:7%;">CB</th>
+<th style="width:11%;">Coef base D · H</th>
+<th style="width:9%;">Comisión %</th>
+<th style="width:12%;">Coef visible D · H</th>
+<th style="width:13%;">Cuota desde</th>
+<th style="width:13%;">Cuota hasta</th>
+</tr>
+</thead>
+<tbody id="tabla"></tbody>
+</table>
+
+<div id="resumen"></div>
+
+<div class="notas">
+<strong>Lectura del cuadro:</strong> el coef base sale del manual oficial de cada banco (Galicia: tasa mín/máx · Columbia: cuota promedio del producto · Creditcar y SCR: D-H del rango). La comisión es lo que ZARO suma como gasto al cliente. El coef visible = base + comisión − precarga (Galicia tiene 14% adentro). El cuadro resultante aplica fricción 5% al banco más barato para el desde.<br><br>
+<strong>Comisión banco (CB):</strong> Galicia −3% (ZARO cede al banco) · Columbia Exclusive +2% · Confort +4% · Premium +6% · Creditcar +7% en segmento 2021-2026 / +2% en segmentos más viejos · San Cristóbal 0%.<br><br>
+<strong>Plazos no operados:</strong> Galicia y Columbia no operan 18m ni 30m según manual oficial abril 2026.
+</div>
+
+</div>
+
+<script>
+const BANCOS = {
+  GAL: {
+    nombre: 'Galicia',
+    precarga: 14,
+    cb: -3,
+    productos: {
+      'trad_0km': {
+        nombre: 'Trad. 0km',
+        anios: [2026, 2026],
+        coefs: { 0:[114.56,121.60], 1:null, 2:[74.03,81.80], 3:null, 4:[61.90,70.45], 5:[56.74,65.97], 6:[54.26,64.02] }
+      },
+      'trad_usados': {
+        nombre: 'Trad. Usados',
+        anios: [2016, 2025],
+        coefs: { 0:[116.46,124.85], 1:null, 2:[76.12,85.45], 3:null, 4:[64.19,74.47], 5:[59.21,70.30], 6:[56.88,68.59] }
+      }
+    }
+  },
+  COL: {
+    nombre: 'Columbia',
+    precarga: 0,
+    productos: {
+      'exclusive': { nombre: 'Exclusive', anios: [2016, 2026], cb: 2,
+        coefs: { 0:[128.08,128.08], 1:null, 2:[84.64,84.64], 3:null, 4:[70.37,70.37], 5:[64.17,64.17], 6:[62.13,62.13] }
+      },
+      'confort':   { nombre: 'Confort',   anios: [2016, 2026], cb: 4,
+        coefs: { 0:[129.41,129.41], 1:null, 2:[87.59,87.59], 3:null, 4:[72.77,72.77], 5:[66.74,66.74], 6:[64.84,64.84] }
+      },
+      'premium':   { nombre: 'Premium',   anios: [2016, 2026], cb: 6,
+        coefs: { 0:[130.74,130.74], 1:null, 2:[89.83,89.83], 3:null, 4:[75.21,75.21], 5:[69.34,69.34], 6:[67.58,67.58] }
+      }
+    }
+  },
+  CRE: {
+    nombre: 'Creditcar',
+    precarga: 0,
+    cb: 2,
+    productos: {
+      'unico': {
+        nombre: 'Único',
+        rangosAnios: [
+          { anios:[2021,2026], cb: 7, coefs:{0:[119,127],1:[92,94],2:[80,82],3:[73,75],4:[68,71],5:[64,66],6:null} },
+          { anios:[2017,2020], cb: 2, coefs:{0:[127,129],1:[101,103],2:[89,91],3:[82,85],4:[78,81],5:null,6:null} },
+          { anios:[2014,2016], cb: 2, coefs:{0:[136,138],1:[110,112],2:[98,101],3:[92,95],4:null,5:null,6:null} },
+          { anios:[2011,2013], cb: 2, coefs:{0:[144,146],1:[119,121],2:[108,111],3:null,4:null,5:null,6:null} }
+        ]
+      }
+    }
+  },
+  SCR: {
+    nombre: 'San Cristóbal',
+    precarga: 0,
+    cb: 0,
+    productos: {
+      'unico': {
+        nombre: 'Único',
+        rangosAnios: [
+          { anios:[2016,2025], coefs:{0:[126,134],1:[89,96],2:[75,83],3:null,4:[63,71],5:null,6:null} },
+          { anios:[2013,2015], coefs:{0:[130,134],1:[103,106],2:[89,95],3:null,4:[76,80],5:null,6:null} }
+        ]
+      }
+    }
+  }
+};
+
+const COMISION_DEFAULT = { GAL: 16, COL: 12, CRE: 11, SCR: 13 };
+const PRODUCTO_DEFAULT = { GAL: 'trad_usados', COL: 'confort', CRE: 'unico', SCR: 'unico' };
+
+const estado = {
+  comisiones: { ...COMISION_DEFAULT },
+  productos: { ...PRODUCTO_DEFAULT }
+};
+
+const BANCO_LIST = ['GAL','COL','CRE','SCR'];
+const fmt = n => '$' + Math.round(n).toLocaleString('es-AR');
+const fmtCoef = n => n.toFixed(2);
+const fmtCB = cb => cb > 0 ? `+${cb}%` : cb < 0 ? `${cb}%` : '0%';
+const cbClass = cb => cb > 0 ? 'cb-pos' : cb < 0 ? 'cb-neg' : 'cb-cero';
+
+function getBase(banco, productoKey, anio, plazoIdx) {
+  const prod = BANCOS[banco].productos[productoKey];
+  if (!prod) return null;
+  if (prod.rangosAnios) {
+    for (const r of prod.rangosAnios) {
+      if (anio >= r.anios[0] && anio <= r.anios[1]) {
+        return r.coefs[plazoIdx];
+      }
+    }
+    return null;
+  }
+  if (prod.anios && (anio < prod.anios[0] || anio > prod.anios[1])) return null;
+  return prod.coefs[plazoIdx];
+}
+
+function getCB(banco, productoKey, anio) {
+  if (banco === 'COL') return BANCOS[banco].productos[productoKey].cb;
+  if (banco === 'CRE') {
+    const prod = BANCOS[banco].productos[productoKey];
+    if (prod.rangosAnios) {
+      for (const r of prod.rangosAnios) {
+        if (anio >= r.anios[0] && anio <= r.anios[1]) {
+          return r.cb !== undefined ? r.cb : 2;
+        }
+      }
+    }
+    return 2;
+  }
+  return BANCOS[banco].cb;
+}
+
+function ajustarProducto(banco, anio) {
+  // Auto-ajustar producto Galicia según año
+  if (banco === 'GAL') {
+    if (anio === 2026 && estado.productos.GAL === 'trad_usados') {
+      estado.productos.GAL = 'trad_0km';
+    } else if (anio < 2026 && estado.productos.GAL === 'trad_0km') {
+      estado.productos.GAL = 'trad_usados';
+    }
+  }
+}
+
+function render() {
+  const cap = parseFloat(document.getElementById('cap').value) || 0;
+  const anio = parseInt(document.getElementById('anio').value);
+  const plazoIdx = parseInt(document.getElementById('plazo').value);
+  
+  // Auto-ajustes
+  BANCO_LIST.forEach(b => ajustarProducto(b, anio));
+
+  let html = '';
+  let coefsDesde = [];
+  let coefsHasta = [];
+  let bancosOperan = [];
+
+  for (const b of BANCO_LIST) {
+    const banco = BANCOS[b];
+    const productoKey = estado.productos[b];
+    const base = getBase(b, productoKey, anio, plazoIdx);
+    const com = estado.comisiones[b];
+    const cb = getCB(b, productoKey, anio);
+
+    let baseStr = '—', visStr = '—', cuotaDStr = '—', cuotaHStr = '—';
+    let opera = false;
+    let dropdownHtml = '';
+
+    // Construir dropdown de productos
+    const prodKeys = Object.keys(banco.productos);
+    if (prodKeys.length > 1) {
+      dropdownHtml = `<select class="producto-select" data-banco="${b}">`;
+      for (const pk of prodKeys) {
+        const sel = pk === productoKey ? 'selected' : '';
+        dropdownHtml += `<option value="${pk}" ${sel}>${banco.productos[pk].nombre}</option>`;
+      }
+      dropdownHtml += `</select>`;
+    } else {
+      dropdownHtml = `<span style="font-size:11px; color:#7F8C8D;">${banco.productos[prodKeys[0]].nombre}</span>`;
+    }
+
+    if (base !== null) {
+      const [d, h] = base;
+      const dVis = d + com - banco.precarga;
+      const hVis = h + com - banco.precarga;
+      baseStr = d === h ? `${d.toFixed(2)}` : `${d.toFixed(2)} · ${h.toFixed(2)}`;
+      visStr = dVis === hVis ? `${fmtCoef(dVis)}` : `${fmtCoef(dVis)} · ${fmtCoef(hVis)}`;
+      cuotaDStr = fmt(dVis * cap / 1000);
+      cuotaHStr = d === h ? '—' : fmt(hVis * cap / 1000);
+      coefsDesde.push(dVis);
+      coefsHasta.push(hVis);
+      bancosOperan.push(b);
+      opera = true;
+    }
+
+    html += `<tr class="${opera ? '' : 'deshabilitado'}">
+      <td>${banco.nombre}<br><span style="font-size:9px; color:#95A5A6;">precarga ${banco.precarga}%</span></td>
+      <td>${dropdownHtml}</td>
+      <td class="${cbClass(cb)}">${fmtCB(cb)}</td>
+      <td class="coef-mono">${baseStr}</td>
+      <td>
+        <input type="number" data-comision="${b}" class="comision-input" value="${com}" step="0.5" ${!opera ? 'disabled' : ''} />
+      </td>
+      <td class="coef-mono ${opera ? 'coef-visible' : ''}">${visStr}</td>
+      <td>${cuotaDStr}</td>
+      <td class="cuota-hasta">${cuotaHStr}</td>
+    </tr>`;
+  }
+  document.getElementById('tabla').innerHTML = html;
+
+  // Cuadro resultante
+  let resumenHtml = '';
+  if (coefsDesde.length === 0) {
+    resumenHtml = `<div class="error">Ningún banco opera con vehículo ${anio} y este plazo</div>`;
+  } else {
+    const desdeReal = Math.min(...coefsDesde);
+    const promBancos = coefsDesde.reduce((a,b) => a+b, 0) / coefsDesde.length;
+    const desdeFinal = desdeReal * 0.95;
+    const hastaFinal = 2 * promBancos - desdeFinal;
+    const promFinal = (desdeFinal + hastaFinal) / 2;
+    const cuotaDesde = desdeFinal * cap / 1000;
+    const cuotaProm = promFinal * cap / 1000;
+    const cuotaHasta = hastaFinal * cap / 1000;
+    const friccion = ((promFinal - desdeFinal) / desdeFinal * 100);
+
+    resumenHtml = `
+      <div class="resumen">
+        <div class="resumen-titulo">Cuadro resultante · fricción 5% en el desde</div>
+        <div class="resumen-grid">
+          <div class="resumen-celda">
+            <div class="resumen-label">Desde</div>
+            <div class="resumen-coef">${fmtCoef(desdeFinal)}</div>
+            <div class="resumen-cuota">${fmt(cuotaDesde)}</div>
+          </div>
+          <div class="resumen-celda promedio">
+            <div class="resumen-label">Promedio</div>
+            <div class="resumen-coef">${fmtCoef(promFinal)}</div>
+            <div class="resumen-cuota">${fmt(cuotaProm)}</div>
+          </div>
+          <div class="resumen-celda">
+            <div class="resumen-label">Hasta</div>
+            <div class="resumen-coef">${fmtCoef(hastaFinal)}</div>
+            <div class="resumen-cuota">${fmt(cuotaHasta)}</div>
+          </div>
+        </div>
+        <div class="resumen-footer">Bancos operando: ${bancosOperan.map(b => BANCOS[b].nombre).join(' · ')} (${bancosOperan.length}) · Fricción desde→promedio: ${friccion.toFixed(1)}%</div>
+      </div>
+    `;
+  }
+  document.getElementById('resumen').innerHTML = resumenHtml;
+
+  // Reconectar eventos
+  document.querySelectorAll('input[data-comision]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      estado.comisiones[inp.dataset.comision] = parseFloat(inp.value) || 0;
+      render();
+    });
+  });
+  document.querySelectorAll('select[data-banco]').forEach(sel => {
+    sel.addEventListener('change', () => {
+      estado.productos[sel.dataset.banco] = sel.value;
+      render();
+    });
+  });
+}
+
+document.getElementById('cap').addEventListener('input', render);
+document.getElementById('anio').addEventListener('change', render);
+document.getElementById('plazo').addEventListener('change', render);
+render();
+</script>
+</body>
+</html>
